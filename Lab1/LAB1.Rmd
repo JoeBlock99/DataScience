@@ -1,8 +1,9 @@
 ---
 title: "Lab1"
-author: "Jose Block", "Byron Mota"
+author: "Jose Block - 18935, Byron Mota - 15246" 
 date: "23/7/2021"
-output: html_document
+output:
+  html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -10,5 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## R Markdown
+
+First we load the data
+```r
+library(readr)
+data <- read_csv("Lab1/data.csv")
+head(data)
+```
 
 
