@@ -1,21 +1,163 @@
 ---
-title: "Lab1"
-author: "Jose Block - 18935, Byron Mota - 15246" 
-date: "23/7/2021"
-output:
-  html_document
+title: "HT 3. Árboles de decisión"
+author: "Juan De Leon, Maria Jose Castro, Jose Block"
+date: "2/8/2021"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-First we load the data
-```{r echo=FALSE, warning = FALSE, message=FALSE}
-library(readr)
-data <- read_csv("data.csv")
-Head(data)
+```{r include=FALSE}
+df = read.csv("./data.csv")
 ```
+
+## - Analisis Exploratorio
+
+* Clasificacion de Variables: 
+
+Aqui se pueden apreciar las variables con las que cuenta este set de datos. Se analizó que significaba cada variable y asi se pudo clasificar cada una de ellas.
+
+```{r echo=FALSE }
+
+data.frame("Variable"=c(colnames(df)), "Tipo de Variable"=c("N/A", "Cualitativa Nominal", "Cualitativa Nominal", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cualitativa Nominal", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cualitativa Nominal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cualitativa Nominal", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cuantitativa Discreta", "Cualitativa Nominal", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cualitativa Nominal", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cuantitativa Discreta", "Cualitativa Ordinal", "Cualitativa Ordinal", "Cualitativa Nominal", "Cuantitativa Discreta"))
+
+```
+
+Histogramas
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+
+ggplot(data=df) + geom_histogram(mapping = aes(x = LotArea))
+ggplot(data=df) + geom_histogram(mapping = aes(x = YearBuilt))
+ggplot(data=df) + geom_histogram(mapping = aes(x = YrSold))
+ggplot(data=df) + geom_histogram(mapping = aes(x = SalePrice))
+
+
+```
+
+Graficas de Puntos
+
+```{r echo=FALSE}
+
+ggplot(data=df) + geom_point(mapping = aes(y = SalePrice, x = LotArea)) 
+ggplot(data=df) + geom_point(mapping = aes(y = SalePrice, x = YearBuilt))
+ggplot(data=df) + geom_point(mapping = aes(y = SalePrice, x = YrSold))
+q<-ggplot(data=df) + geom_point(mapping = aes(y = SalePrice, x = Neighborhood))
+q + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggplot(data=df) + geom_point(mapping = aes(y = SalePrice, x = GarageType))
+ggplot(data=df) + geom_point(mapping = aes(y = SalePrice, x = GarageArea))
+
+
+```
+
+Se escogieron las variables representadas en las graficas presentadas anteriormente ya que se considero que estas estan fuertemente relacionadas al Sale Price. Precisamente se obtuvo mucha informacion a partir de esto. Las variables cuantitativas, en su mayoria, tienen una distribucion normal. Asimismo, se pudo identificar cuales eran los rangos de precios y que factores influian mas en el mismo.
+
+
+## - Analisis de Grupos
+
+```{r echo=FALSE, include=FALSE, warning=FALSE}
+set.seed(20)
+data <- df[,c("LotFrontage","LotArea","YearBuilt","GarageYrBlt","GarageArea","YrSold", "SalePrice")]
+data <- na.omit(data)
+
+wssplot <- function(test1, nc=20, seed=123){
+  wss <- (nrow(data)-1)*sum(apply(data,2,var))
+  for (i in 2:10) 
+    wss[i] <- sum(kmeans(data, centers=i)$withinss)
+  plot(1:10, wss, type="b", xlab="Number of Clusters",  ylab="Within groups sum of squares")
+}
+
+```
+
+Para realizar la grafica de codo se seleccionaron las variables cuantitativas que consideramos mas relevantes que son factores que podrian influir para deterinar el precio de venta de una casa. Mediante esta grafica de codo podemos determinar cuantos clusters seran pertinentes para nuestro analisis de datos. 
+
+```{r echo=FALSE, warning=FALSE}
+wssplot(test1, nc=20)
+```
+
+El grafico antes mostrado nos indica que podemos hacer una eleccion entre 3 y 5 clusters por lo que se decidira utilizar 4 clusters para el analisis de datos.
+
+```{r echo=FALSE, warning=FALSE}
+
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+
+k1 <- kmeans(data, centers = 3, nstart = 25)
+fviz_cluster(k1, data = data)
+
+```
+
+Luego del agrupamiento se obtuvo la grafica anterior, sin embargo, dada la cantidad de datos y la cercania entre valores no se puede apreciar con certeza los clusters generados. Por que que decidimos separar los clusters por variables especificas. Por ejemplo, se decidio ver los clusters creados al comparar unicamente el año en que se realizó la casa y su precio de venta.
+
+```{r echo=FALSE, warning=FALSE}
+mydata <- data %>% select(3, 7)
+a<- data.matrix(mydata)
+km<-kmeans(a, 3, iter.max = 10, nstart = 1)
+plot(a, col = km$cluster)
+points(km$centers, col = 1:5, type= "p",pch = 8, cex = 10)
+```
+
+De esta manera se pudo apreciar mejor la division entre grupoos. Y se realizo asi con todas las variables que considermaos necesarias para el analisis.
+
+```{r echo=FALSE, warning=FALSE}
+
+mydata <- data %>% select(1, 7)
+a<- data.matrix(mydata)
+km<-kmeans(a, 3, iter.max = 10, nstart = 1)
+plot(a, col = km$cluster)
+points(km$centers, col = 1:5, type= "p",pch = 8, cex = 10)
+
+mydata <- data %>% select(2, 7)
+a<- data.matrix(mydata)
+km<-kmeans(a, 4, iter.max = 10, nstart = 1)
+plot(a, col = km$cluster)
+points(km$centers, col = 1:5, type= "p",pch = 8, cex = 10)
+
+mydata <- data %>% select(4, 7)
+a<- data.matrix(mydata)
+km<-kmeans(a, 3, iter.max = 10, nstart = 1)
+plot(a, col = km$cluster)
+points(km$centers, col = 1:5, type= "p",pch = 8, cex = 10)
+
+mydata <- data %>% select(5, 7)
+a<- data.matrix(mydata)
+km<-kmeans(a, 3, iter.max = 10, nstart = 1)
+plot(a, col = km$cluster)
+points(km$centers, col = 1:5, type= "p",pch = 8, cex = 10)
+
+mydata <- data %>% select(6, 7)
+a<- data.matrix(mydata)
+km<-kmeans(a, 3, iter.max = 10, nstart = 1)
+plot(a, col = km$cluster)
+points(km$centers, col = 1:5, type= "p",pch = 8, cex = 10)
+```
+
+
+Percentiles:
+
+```{r echo=FALSE}
+quantile(df$SalePrice, c(.33, .66, .99))
+```
+## - Clasificacion de Casas (Economicas, Intermedias y Caras)
+
+En base al analisis exploratorio realizado se separaron las variables que consideramos aportan mayor valor a nuestro analisis sobre los factores que determinan el precio de venta. Estas mismas se utilizaron para determinar los clusters. De esta manera se eligieron los 4 grupos. 
+
+A partir de los clusters obtenidos y los percentiles se determino el rango de precio para cada grupo tomando en cuenta lusters y percentiles y aproximando entre sí. 
+
+1. Casas Económicas: 0.00 a 145,000
+2. Casas Intermedias:145,000 a 205,000
+3. Casas Caras: 205,000 a 410,000
+4. Casas Muy caras:
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(plyr)
+df$tipoDeCasa = cut(df$SalePrice,c(0,145000,205000,410000), labels = c("economico", "intermedio", "caro"))
+
+```
+
 
